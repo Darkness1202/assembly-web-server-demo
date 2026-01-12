@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assembly Web Server Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            padding: 20px;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ffff;
+            margin-bottom: 20px;
+            font-size: 28px;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .split-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: #000;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .panel-header {
+            background: #003300;
+            padding: 10px 15px;
+            border-bottom: 2px solid #00ff00;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #00ff00;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1;
+                box-shadow: 0 0 5px #00ff00;
+            }
+            50% { 
+                opacity: 0.5;
+                box-shadow: 0 0 15px #00ff00;
+            }
+        }
+
+        .terminal {
+            padding: 15px;
+            height: 500px;
+            overflow-y: auto;
+            background: #000;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .terminal-line {
+            margin: 2px 0;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-startup { color: #ffff00; }
+        .log-info { color: #00ffff; }
+        .log-success { color: #00ff00; }
+        .log-request { color: #ff00ff; }
+        .log-data { color: #888; }
+
+        .browser-window {
+            background: #fff;
+            height: 500px;
+            overflow-y: auto;
+        }
+
+        .browser-chrome {
+            background: #e0e0e0;
+            padding: 8px;
+            border-bottom: 1px solid #999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .browser-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .browser-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid #999;
+        }
+
+        .btn-close { background: #ff5f56; }
+        .btn-minimize { background: #ffbd2e; }
+        .btn-maximize { background: #27c93f; }
+
+        .url-bar {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #999;
+            border-radius: 3px;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .browser-content {
+            padding: 0;
+        }
+
+        /* The actual served page */
+        .served-page {
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            min-height: 100%;
+        }
+
+        .served-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        .served-title {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff00;
+            animation: glow 1.5s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px #00ff00; }
+            50% { text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00; }
+        }
+
+        .served-subtitle {
+            text-align: center;
+            color: #00ffff;
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            background: #001a00;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .search-label {
+            color: #ffff00;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: #000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        .search-buttons {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .search-button {
+            background: #003300;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+
+        .search-button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .info-box {
+            border: 1px dashed #00ff00;
+            padding: 15px;
+            margin: 20px 0;
+            background: #001100;
+        }
+
+        .stats {
+            color: #ffff00;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .code-block {
+            background: #001a00;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            overflow-x: auto;
+            margin: 10px 0;
+            color: #00ffff;
+            font-size: 12px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: #000;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+        }
+
+        .control-button {
+            background: #003300;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 12px 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            font-weight: bold;
+        }
+
+        .control-button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 1000px) {
+            .split-view {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>⚡ ASSEMBLY WEB SERVER - LIVE SIMULATION ⚡</h1>
+
+        <div class="split-view">
+            <!-- Terminal Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="status-dot"></div>
+                    <span>SERVER TERMINAL - localhost:8080</span>
+                </div>
+                <div class="terminal" id="terminal">
+                    <!-- Terminal output will appear here -->
+                </div>
+            </div>
+
+            <!-- Browser Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="status-dot"></div>
+                    <span>BROWSER VIEW</span>
+                </div>
+                <div class="browser-window">
+                    <div class="browser-chrome">
+                        <div class="browser-buttons">
+                            <div class="browser-button btn-close"></div>
+                            <div class="browser-button btn-minimize"></div>
+                            <div class="browser-button btn-maximize"></div>
+                        </div>
+                        <div class="url-bar">http://localhost:8080</div>
+                    </div>
+                    <div class="browser-content">
+                        <div class="served-page">
+                            <div class="served-container">
+                                <div class="served-title">
+                                    ╔═══════════════════════════════════╗<br>
+                                    ║  ASSEMBLY SEARCH ENGINE  ║<br>
+                                    ╚═══════════════════════════════════╝
+                                </div>
+                                <p class="served-subtitle">Powered by x86-64 Machine Code</p>
+
+                                <div class="search-box">
+                                    <p class="search-label">>>> ENTER SEARCH QUERY <<<</p>
+                                    <input type="text" class="search-input" id="searchInput" placeholder="Type your search...">
+                                    <div class="search-buttons">
+                                        <button class="search-button" onclick="performSearch()">[ SEARCH ]</button>
+                                        <button class="search-button" onclick="performSearch(true)">[ LUCKY ]</button>
+                                    </div>
+                                </div>
+
+                                <div class="info-box">
+                                    <p><b>SYSTEM INFORMATION:</b></p>
+                                    <div class="code-block">
+╔════════════════════════════════════════╗
+║ Architecture:    x86-64               ║
+║ Language:        Assembly (NASM)      ║
+║ Syscalls:        Linux x86-64 ABI     ║
+║ Socket:          AF_INET/SOCK_STREAM  ║
+║ Port:            8080                 ║
+║ Protocol:        HTTP/1.1             ║
+║ Status:          <span id="statusText">RUNNING</span>              ║
+╚════════════════════════════════════════╝
+                                    </div>
+                                </div>
+
+                                <div class="stats">
+                                    ▓▓▓ SERVER RUNNING IN PURE ASSEMBLY ▓▓▓<br>
+                                    No frameworks • No interpreters • Just machine code<br>
+                                    <span id="requestCount">0</span> requests served
+                                </div>
+
+                                <div class="info-box">
+                                    <p><b>ASSEMBLY OPCODES USED:</b></p>
+                                    <div class="code-block">
+MOV  - Move data between registers
+PUSH - Push onto stack
+POP  - Pop from stack
+CALL - Call system functions
+JMP  - Jump to code location
+CMP  - Compare values
+JNE  - Jump if not equal
+INT  - Software interrupt (syscall)
+RET  - Return from subroutine
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-button" id="startBtn" onclick="startServer()">▶ START SERVER</button>
+            <button class="control-button" id="requestBtn" onclick="simulateRequest()" disabled>📡 SIMULATE REQUEST</button>
+            <button class="control-button" id="stopBtn" onclick="stopServer()" disabled>⏹ STOP SERVER</button>
+            <button class="control-button" onclick="clearTerminal()">🗑 CLEAR TERMINAL</button>
+        </div>
+    </div>
+
+    <script>
+        let serverRunning = false;
+        let requestCounter = 0;
+        let requestInterval;
+
+        function addTerminalLine(text, className = '') {
+            const terminal = document.getElementById('terminal');
+            const line = document.createElement('div');
+            line.className = `terminal-line ${className}`;
+            line.textContent = text;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function startServer() {
+            if (serverRunning) return;
+            
+            serverRunning = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('requestBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('statusText').textContent = 'RUNNING';
+
+            addTerminalLine('===========================================', 'log-startup');
+            addTerminalLine('ASSEMBLY WEB SERVER v1.0', 'log-startup');
+            addTerminalLine('===========================================', 'log-startup');
+            
+            setTimeout(() => {
+                addTerminalLine('[SYS] socket(AF_INET, SOCK_STREAM, 0) = 3', 'log-info');
+            }, 200);
+            
+            setTimeout(() => {
+                addTerminalLine('[SYS] setsockopt(3, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0', 'log-info');
+            }, 400);
+            
+            setTimeout(() => {
+                addTerminalLine('[SYS] bind(3, {sa_family=AF_INET, sin_port=htons(8080)}, 16) = 0', 'log-info');
+            }, 600);
+            
+            setTimeout(() => {
+                addTerminalLine('[SYS] listen(3, 10) = 0', 'log-info');
+            }, 800);
+            
+            setTimeout(() => {
+                addTerminalLine('Server starting on port 8080...', 'log-success');
+                addTerminalLine('Access at: http://localhost:8080', 'log-success');
+                addTerminalLine('Press STOP to terminate', 'log-success');
+                addTerminalLine('===========================================', 'log-startup');
+                addTerminalLine('[READY] Waiting for connections...', 'log-success');
+            }, 1000);
+
+            // Auto-simulate requests periodically
+            requestInterval = setInterval(() => {
+                if (Math.random() > 0.7) {
+                    simulateRequest(true);
+                }
+            }, 5000);
+        }
+
+        function simulateRequest(auto = false) {
+            if (!serverRunning) return;
+            
+            requestCounter++;
+            document.getElementById('requestCount').textContent = requestCounter;
+
+            const timestamp = new Date().toLocaleTimeString();
+            
+            addTerminalLine(`[${timestamp}] accept(3, ...) = 4`, 'log-request');
+            
+            setTimeout(() => {
+                addTerminalLine('[RECV] GET / HTTP/1.1', 'log-data');
+                addTerminalLine('[RECV] Host: localhost:8080', 'log-data');
+                addTerminalLine('[RECV] User-Agent: Mozilla/5.0 ...', 'log-data');
+            }, auto ? 100 : 300);
+            
+            setTimeout(() => {
+                addTerminalLine('[SEND] HTTP/1.1 200 OK', 'log-success');
+                addTerminalLine('[SEND] Content-Type: text/html', 'log-data');
+                addTerminalLine(`[SEND] Content-Length: 3847`, 'log-data');
+            }, auto ? 200 : 600);
+            
+            setTimeout(() => {
+                addTerminalLine('[SEND] <HTML page data sent>', 'log-info');
+                addTerminalLine(`[SYS] close(4) = 0`, 'log-info');
+                addTerminalLine(`[OK] Request #${requestCounter} completed`, 'log-success');
+                addTerminalLine('[READY] Waiting for connections...', 'log-success');
+            }, auto ? 300 : 900);
+        }
+
+        function stopServer() {
+            if (!serverRunning) return;
+            
+            serverRunning = false;
+            clearInterval(requestInterval);
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('requestBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('statusText').textContent = 'STOPPED';
+
+            addTerminalLine('', '');
+            addTerminalLine('[SHUTDOWN] Received termination signal', 'log-startup');
+            addTerminalLine('[SYS] close(3) = 0', 'log-info');
+            addTerminalLine('[SYS] exit(0)', 'log-info');
+            addTerminalLine('===========================================', 'log-startup');
+            addTerminalLine('Server stopped.', 'log-startup');
+            addTerminalLine('===========================================', 'log-startup');
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminal').innerHTML = '';
+        }
+
+        function performSearch(lucky = false) {
+            const query = document.getElementById('searchInput').value.trim();
+            if (query) {
+                simulateRequest();
+                setTimeout(() => {
+                    if (lucky) {
+                        window.open(`https://www.google.com/search?btnI=1&q=${encodeURIComponent(query)}`, '_blank');
+                    } else {
+                        window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                    }
+                }, 1000);
+            }
+        }
+
+        // Color changing title
+        setInterval(() => {
+            const title = document.querySelector('.served-title');
+            if (title) {
+                const currentColor = title.style.color;
+                title.style.color = currentColor === 'rgb(0, 255, 255)' ? '#00ff00' : '#00ffff';
+            }
+        }, 1000);
+
+        // Initial message
+        addTerminalLine('Assembly Web Server Simulator Ready', 'log-info');
+        addTerminalLine('Click START SERVER to begin...', 'log-info');
+        addTerminalLine('', '');
+    </script>
+</body>
+</html>
